@@ -282,6 +282,28 @@ func TestDocsPage(t *testing.T) {
 	}
 }
 
+func TestOpenAPIServerURLIsRelative(t *testing.T) {
+	rec := request(t, newSpellHandler(), http.MethodGet, "/openapi.json", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("got status %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var doc struct {
+		Servers []struct {
+			URL string `json:"url"`
+		} `json:"servers"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode document: %v", err)
+	}
+	if len(doc.Servers) != 1 {
+		t.Fatalf("got %d servers, want 1", len(doc.Servers))
+	}
+	if got := doc.Servers[0].URL; got != "/" {
+		t.Errorf("got server URL %q, want the relative / so Scalar calls the serving origin", got)
+	}
+}
+
 func TestOpenAPIDocument(t *testing.T) {
 	rec := request(t, newSpellHandler(), http.MethodGet, "/openapi.json", "")
 	if rec.Code != http.StatusOK {

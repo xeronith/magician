@@ -231,6 +231,8 @@ $ curl http://127.0.0.1:8080/openapi.json
 {"openapi":"3.1.0","info":{"title":"magician",...}}
 ```
 
+The document's `servers` entry is the relative URL `/`, so Scalar calls the same origin that served `/docs`. The reference UI works through `localhost`, `127.0.0.1`, or any custom address without CORS.
+
 ### GET /docs
 
 Serves an HTML page that renders `/openapi.json` with Scalar. Open `http://127.0.0.1:8080/docs` in a browser. The page imports Scalar from the pinned URL `https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.77.0/esm.js`; the script runs in the browser only, and the server never fetches the CDN itself.
