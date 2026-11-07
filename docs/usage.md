@@ -51,3 +51,25 @@ spell: missing word
 $ echo $?
 1
 ```
+
+## magician shout &lt;text&gt;
+
+Prints the text uppercased, followed by `!!!`. Multiple arguments are joined with a single space.
+
+```console
+$ magician shout magic
+MAGIC!!!
+
+$ magician shout hello world
+HELLO WORLD!!!
+```
+
+When the text is missing, the command exits with a non-zero status and a clear error:
+
+```console
+$ magician shout
+shout: missing text
+
+$ echo $?
+1
+```
