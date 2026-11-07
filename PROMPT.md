@@ -26,5 +26,5 @@ Build a small, dependency-free Go CLI called `magician` in the module `github.co
 - Go standard library only.
 - Entrypoint: `./cmd/magician` with `var version = "dev"` in package `main`.
 - Table-driven unit tests for the greeting and reversing logic.
-- `gofmt`, `go build ./...`, `go vet ./...`, and `go test ./...` must pass.
+- `gofmt`, `go build ./...`, `go vet ./...`, `go test ./...`, and `golangci-lint run ./...` must pass.
 - A short usage document at `docs/usage.md` with examples for every command.

@@ -21,7 +21,7 @@ flowchart TD
 
 | Job | What it does |
 | --- | --- |
-| `implement` | Checks whether `PROMPT.md` changed, runs the `implementer` agent with the task in `.github/sdlc/implement.md`, guards protected files, validates with `go build`/`go vet`/`go test`, commits to `sdlc/run-<n>`, and opens a PR. |
+| `implement` | Checks whether `PROMPT.md` changed, runs the `implementer` agent with the task in `.github/sdlc/implement.md`, guards protected files, validates with `gofmt`/`go build`/`go vet`/`go test`/`golangci-lint`, commits to `sdlc/run-<n>`, and opens a PR. |
 | `quality` | Checks out the PR branch (or `main` when nothing changed), runs `gofmt`, `go vet`, `golangci-lint`, and `go test ./...`. |
 | `review` | Sends the diff to a read-only OpenCode reviewer. The review is posted as a PR comment, and the verdict gates the merge. |
 | `merge` | Squash-merges the PR only when the review returned `VERDICT: APPROVE`. |

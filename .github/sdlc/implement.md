@@ -10,7 +10,8 @@ You are running unattended in CI. Make the repository match `PROMPT.md`.
 - The CLI entrypoint must be `./cmd/magician` (package `main`) and must declare `var version = "dev"`.
 - Add or update focused, fast tests for the behavior you add. No network, sleeps, or external services.
 - Update `docs/usage.md` when user-facing behavior changes. Do not edit `README.md`.
-- Run `gofmt -w .`, `go mod tidy`, `go build ./...`, `go vet ./...`, and `go test ./...`. Fix every failure.
+- Handle every returned error or explicitly discard it; `errcheck` must report zero findings.
+- Run `gofmt -w .`, `go mod tidy`, `go build ./...`, `go vet ./...`, `go test ./...`, and `golangci-lint run ./...`. Fix every failure and lint finding.
 - Never modify `.github/**`, `.opencode/**`, `PROMPT.md`, `opencode.json`, or `README.md`.
 - Never run `git commit`, `git push`, `gh`, or any command that publishes changes. The workflow handles git.
 
