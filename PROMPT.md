@@ -82,6 +82,10 @@ a blank field as invalid.
   must not fetch it.
 - Put the OpenAPI document at `cmd/magician/openapi.json` and embed it with `//go:embed`, so
   release binaries work from any directory.
+- The OpenAPI `servers` entry must use a relative URL (`/`), not a hardcoded host or port.
+  Scalar must call the same origin that served `/docs`, so the UI works through
+  `localhost`, `127.0.0.1`, or a custom address without CORS.
+- Do not add permissive CORS headers; same-origin requests are the intended design.
 
 ## Requirements
 
@@ -90,6 +94,7 @@ a blank field as invalid.
 - Table-driven unit tests for the existing helpers and for every HTTP route and error path.
 - HTTP tests must use `net/http/httptest` against the handler. Do not bind a fixed port,
   sleep, or fetch the Scalar CDN in tests.
+- Test that `/openapi.json` uses a relative server URL.
 - `gofmt`, `go build ./...`, `go vet ./...`, `go test ./...`, and `golangci-lint run ./...` must pass.
 - A short usage document at `docs/usage.md` with examples for every command, including the
   server, `/docs`, and each REST endpoint.
