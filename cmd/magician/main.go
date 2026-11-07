@@ -1,4 +1,4 @@
-// Command magician is a small CLI with version, greet, spell, and shout commands.
+// Command magician is a small CLI with version, greet, spell, shout, and count commands.
 package main
 
 import (
@@ -13,7 +13,7 @@ import (
 var version = "dev"
 
 // errUsage describes the accepted commands.
-var errUsage = errors.New("usage: magician <version|greet|spell|shout> [args]")
+var errUsage = errors.New("usage: magician <version|greet|spell|shout|count> [args]")
 
 func main() {
 	if err := run(os.Stdout, os.Args[1:]); err != nil {
@@ -47,6 +47,12 @@ func run(out io.Writer, args []string) error {
 		}
 		say(out, shout(strings.Join(args[1:], " ")))
 		return nil
+	case "count":
+		if len(args) < 2 {
+			return errors.New("count: missing text")
+		}
+		say(out, fmt.Sprintf("%d", count(strings.Join(args[1:], " "))))
+		return nil
 	default:
 		return fmt.Errorf("unknown command %q: %w", args[0], errUsage)
 	}
@@ -77,4 +83,9 @@ func reverse(s string) string {
 // shout returns text uppercased and followed by "!!!".
 func shout(text string) string {
 	return strings.ToUpper(text) + "!!!"
+}
+
+// count returns the number of whitespace-separated words in text.
+func count(text string) int {
+	return len(strings.Fields(text))
 }

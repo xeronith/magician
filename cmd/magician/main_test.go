@@ -72,6 +72,28 @@ func TestShout(t *testing.T) {
 	}
 }
 
+func TestCount(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  int
+	}{
+		{name: "empty text has no words", input: "", want: 0},
+		{name: "whitespace-only text has no words", input: "  \t\n ", want: 0},
+		{name: "single word", input: "magic", want: 1},
+		{name: "multiple words", input: "hello big world", want: 3},
+		{name: "runs of whitespace separate words", input: "  one\ttwo\nthree  ", want: 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := count(tt.input); got != tt.want {
+				t.Errorf("count(%q) = %d, want %d", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRun(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -88,6 +110,8 @@ func TestRun(t *testing.T) {
 		{name: "spell without a word is an error", args: []string{"spell"}, wantErr: true},
 		{name: "shout joins and uppercases words", args: []string{"shout", "hello", "world"}, want: "HELLO WORLD!!!\n"},
 		{name: "shout without text is an error", args: []string{"shout"}, wantErr: true},
+		{name: "count counts the words", args: []string{"count", "hello", "big", "world"}, want: "3\n"},
+		{name: "count without text is an error", args: []string{"count"}, wantErr: true},
 	}
 
 	for _, tt := range tests {
