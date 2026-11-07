@@ -73,3 +73,28 @@ shout: missing text
 $ echo $?
 1
 ```
+
+## magician count &lt;text&gt;
+
+Prints the number of whitespace-separated words in the text. Multiple arguments are joined with a single space. Whitespace-only text prints `0`.
+
+```console
+$ magician count hello world
+2
+
+$ magician count "  one   two  "
+2
+
+$ magician count "   "
+0
+```
+
+When the text is missing, the command exits with a non-zero status and a clear error:
+
+```console
+$ magician count
+count: missing text
+
+$ echo $?
+1
+```
