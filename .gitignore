@@ -1,5 +1,6 @@
 # Build output
 /dist/
+/magician
 *.test
 *.out
 
