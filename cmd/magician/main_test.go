@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 )
@@ -91,6 +92,54 @@ func TestCount(t *testing.T) {
 				t.Errorf("count(%q) = %d, want %d", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestServe(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "an unusable address is an error",
+			args: []string{"serve", "bogus"},
+			want: "serve: listen tcp: address bogus: missing port in address",
+		},
+		{
+			name: "a second argument is an error",
+			args: []string{"serve", "127.0.0.1:8080", "extra"},
+			want: `serve: unexpected argument "extra"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			err := run(&out, tt.args)
+			if err == nil {
+				t.Fatalf("run(%v) succeeded, want error", tt.args)
+			}
+			if err.Error() != tt.want {
+				t.Errorf("run(%v) returned %q, want %q", tt.args, err, tt.want)
+			}
+			if out.Len() != 0 {
+				t.Errorf("run(%v) wrote %q alongside an error", tt.args, out.String())
+			}
+		})
+	}
+}
+
+func TestServeAddrShutsDownOnInterrupt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	var out bytes.Buffer
+	if err := serveAddr(&out, "127.0.0.1:0", ctx); err != nil {
+		t.Fatalf("serveAddr returned error: %v", err)
+	}
+	if !strings.HasPrefix(out.String(), "listening on http://127.0.0.1:") {
+		t.Errorf("serveAddr wrote %q, want a listening message", out.String())
 	}
 }
 

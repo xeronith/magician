@@ -1,19 +1,27 @@
-// Command magician is a small CLI with version, greet, spell, shout, and count commands.
+// Command magician is a small CLI with version, greet, spell, shout, and count
+// commands, plus serve: an HTTP server with a small spell REST API and Scalar
+// documentation.
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"os"
+	"os/signal"
 	"slices"
 	"strings"
+	"syscall"
+	"time"
 )
 
 var version = "dev"
 
 // errUsage describes the accepted commands.
-var errUsage = errors.New("usage: magician <version|greet|spell|shout|count> [args]")
+var errUsage = errors.New("usage: magician <version|greet|spell|shout|count|serve> [args]")
 
 func main() {
 	if err := run(os.Stdout, os.Args[1:]); err != nil {
@@ -53,6 +61,8 @@ func run(out io.Writer, args []string) error {
 		}
 		say(out, fmt.Sprintf("%d", count(strings.Join(args[1:], " "))))
 		return nil
+	case "serve":
+		return serve(out, args[1:])
 	default:
 		return fmt.Errorf("unknown command %q: %w", args[0], errUsage)
 	}
@@ -88,4 +98,57 @@ func shout(text string) string {
 // count returns the number of whitespace-separated words in text.
 func count(text string) int {
 	return len(strings.Fields(text))
+}
+
+// defaultAddr is the address serve listens on when none is given.
+const defaultAddr = "127.0.0.1:8080"
+
+// serve takes the optional address and runs the HTTP server until the process
+// is interrupted.
+func serve(out io.Writer, args []string) error {
+	addr := defaultAddr
+	switch len(args) {
+	case 0:
+	case 1:
+		addr = args[0]
+	default:
+		return fmt.Errorf("serve: unexpected argument %q", args[1])
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	return serveAddr(out, addr, ctx)
+}
+
+// serveAddr listens on addr and serves requests until ctx is interrupted or
+// the listener fails.
+func serveAddr(out io.Writer, addr string, ctx context.Context) error {
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("serve: %w", err)
+	}
+
+	server := &http.Server{Handler: newSpellHandler()}
+	errCh := make(chan error, 1)
+	go func() {
+		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
+
+	say(out, "listening on http://"+listener.Addr().String())
+
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("serve: %w", err)
+	case <-ctx.Done():
+	}
+
+	// The process was interrupted; give in-flight requests a moment to
+	// finish before returning.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = server.Shutdown(shutdownCtx)
+	return nil
 }

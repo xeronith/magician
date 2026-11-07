@@ -1,0 +1,221 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "magician",
+    "description": "A small spell catalog served by `magician serve`.",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080",
+      "description": "The default magician serve address"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Redirect to the API reference",
+        "operationId": "redirectToDocs",
+        "responses": {
+          "302": {
+            "description": "Redirects to /docs.",
+            "headers": {
+              "Location": {
+                "description": "The documentation page.",
+                "schema": { "type": "string", "const": "/docs" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Report service health",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "The service is up.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Health" },
+                "example": { "status": "ok" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spells": {
+      "get": {
+        "summary": "List spells",
+        "operationId": "listSpells",
+        "responses": {
+          "200": {
+            "description": "All spells in ascending id order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Spell" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a spell",
+        "operationId": "createSpell",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/NewSpell" },
+              "example": { "name": "fireball", "effect": "burns" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created spell.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Spell" }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not valid JSON or a field is blank.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spells/{id}": {
+      "get": {
+        "summary": "Get a spell",
+        "operationId": "getSpell",
+        "parameters": [{ "$ref": "#/components/parameters/SpellID" }],
+        "responses": {
+          "200": {
+            "description": "The spell.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Spell" }
+              }
+            }
+          },
+          "404": {
+            "description": "No spell with that id.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a spell",
+        "operationId": "deleteSpell",
+        "parameters": [{ "$ref": "#/components/parameters/SpellID" }],
+        "responses": {
+          "204": {
+            "description": "The spell was deleted."
+          },
+          "404": {
+            "description": "No spell with that id.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "Fetch this document",
+        "operationId": "getOpenAPIDocument",
+        "responses": {
+          "200": {
+            "description": "This OpenAPI document.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/docs": {
+      "get": {
+        "summary": "Render the API reference",
+        "operationId": "getDocs",
+        "responses": {
+          "200": {
+            "description": "An HTML page that renders this document with Scalar.",
+            "content": {
+              "text/html": {}
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "SpellID": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "The spell id.",
+        "schema": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "const": "ok" }
+        }
+      },
+      "Spell": {
+        "type": "object",
+        "required": ["id", "name", "effect"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Increasing across creations and never reused."
+          },
+          "name": { "type": "string" },
+          "effect": { "type": "string" }
+        }
+      },
+      "NewSpell": {
+        "type": "object",
+        "required": ["name", "effect"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "effect": { "type": "string", "minLength": 1 }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}
