@@ -7,8 +7,9 @@ You are running unattended in CI. Make the repository match `PROMPT.md`.
 - Read `PROMPT.md` first. It is the source of truth. Implement only what it asks for.
 - Work in the existing Go module if one exists. If there is no module, create one with a sensible path.
 - Use only the Go standard library.
-- The CLI entrypoint must be `./cmd/magician` (package `main`) and must declare `var version = "dev"`.
-- Add or update focused, fast tests for the behavior you add. No network, sleeps, or external services.
+- The CLI entrypoint must be `./cmd/magician` (package `main`) and must declare `var version = "dev"`. Keep every existing command working.
+- Add or update focused, fast tests for the behavior you add. No external network, sleeps, or external services. HTTP handler tests may use `net/http/httptest`; never bind a fixed port.
+- Embed any runtime data such as `cmd/magician/openapi.json` with `//go:embed`; release binaries must not read files from disk at runtime.
 - Update `docs/usage.md` when user-facing behavior changes. Do not edit `README.md`.
 - Handle every returned error or explicitly discard it; `errcheck` must report zero findings.
 - Run `gofmt -w .`, `go mod tidy`, `go build ./...`, `go vet ./...`, `go test ./...`, and `golangci-lint run ./...`. Fix every failure and lint finding.
