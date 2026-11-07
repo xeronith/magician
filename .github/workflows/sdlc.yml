@@ -1,0 +1,379 @@
+name: SDLC
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: sdlc-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  OPENCODE_VERSION: "2.2.6"
+
+jobs:
+  implement:
+    name: Implement PROMPT.md
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      changed: ${{ steps.commit.outputs.changed || 'false' }}
+      branch: ${{ steps.commit.outputs.branch }}
+      pr: ${{ steps.commit.outputs.pr }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect PROMPT.md change
+        id: detect
+        run: |
+          set -euo pipefail
+          if [ ! -f PROMPT.md ]; then
+            echo "::error::PROMPT.md is missing from the repository root"
+            exit 1
+          fi
+
+          changed=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            changed=true
+          else
+            before="${{ github.event.before }}"
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+              changed=true
+            elif ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+              changed=true
+            elif git diff --name-only "$before" "${{ github.sha }}" | grep -qx 'PROMPT.md'; then
+              changed=true
+            fi
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        if: steps.detect.outputs.changed == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Cache OpenCode
+        if: steps.detect.outputs.changed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.opencode/bin
+          key: opencode-${{ runner.os }}-${{ env.OPENCODE_VERSION }}
+
+      - name: Install OpenCode
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          if [ ! -x "$HOME/.opencode/bin/opencode" ]; then
+            curl -fsSL https://opencode.ai/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
+          fi
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Implement with OpenCode
+        if: steps.detect.outputs.changed == 'true'
+        timeout-minutes: 20
+        env:
+          LITELLM_BASE_URL: ${{ secrets.LITELLM_BASE_URL }}
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          SDLC_MODEL: ${{ vars.SDLC_MODEL }}
+        run: |
+          set -euo pipefail
+          for var in LITELLM_BASE_URL LITELLM_API_KEY SDLC_MODEL; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::$var is not set"
+              exit 1
+            fi
+          done
+          opencode --standalone run --auto --archived --format json \
+            --agent implementer \
+            --title "SDLC implement run #${{ github.run_number }}" \
+            "$(cat .github/sdlc/implement.md)" | tee /tmp/opencode-implement.json
+
+      - name: Validate, commit, and open PR
+        id: commit
+        if: steps.detect.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Agent produced no changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          protected=$(git status --porcelain -- .github .opencode PROMPT.md opencode.json README.md || true)
+          if [ -n "$protected" ]; then
+            echo "::error::Agent modified protected paths:"
+            printf '%s\n' "$protected"
+            exit 1
+          fi
+
+          test -f cmd/magician/main.go || {
+            echo "::error::Agent did not create cmd/magician/main.go"
+            exit 1
+          }
+
+          GOFMT="$(go env GOROOT)/bin/gofmt"
+          "$GOFMT" -w .
+          go mod tidy
+          go build ./...
+          go build -o /tmp/magician-check ./cmd/magician
+          go vet ./...
+          go test ./...
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes remain after formatting."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          branch="sdlc/run-${{ github.run_number }}-${{ github.run_attempt }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add -A
+          git commit -m "feat: implement PROMPT.md (run #${{ github.run_number }}) [skip ci]"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "$branch"
+
+          {
+            echo 'Automated implementation of `PROMPT.md` by OpenCode.'
+            echo
+            echo "Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            echo '```'
+            git diff --stat "origin/main...HEAD"
+            echo '```'
+            echo
+            echo 'This PR is merged automatically only if the automated review returns `VERDICT: APPROVE`.'
+          } > /tmp/pr-body.md
+
+          pr_url=$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "feat: implement PROMPT.md (run #${{ github.run_number }})" \
+            --body-file /tmp/pr-body.md)
+          pr_number=$(printf '%s' "$pr_url" | sed -E 's#.*/pull/([0-9]+)$#\1#')
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "pr=$pr_number" >> "$GITHUB_OUTPUT"
+
+  quality:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    needs: implement
+    if: always() && needs.implement.result == 'success'
+    steps:
+      - name: Check out changes
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.implement.outputs.branch || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Check formatting
+        run: |
+          set -euo pipefail
+          GOFMT="$(go env GOROOT)/bin/gofmt"
+          unformatted=$("$GOFMT" -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::Unformatted Go files:"
+            printf '%s\n' "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+
+      - name: Test
+        run: go test ./...
+
+  review:
+    name: Review pull request
+    runs-on: ubuntu-latest
+    needs: [implement, quality]
+    if: needs.implement.outputs.changed == 'true' && needs.quality.result == 'success'
+    timeout-minutes: 20
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.implement.outputs.branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Cache OpenCode
+        uses: actions/cache@v4
+        with:
+          path: ~/.opencode/bin
+          key: opencode-${{ runner.os }}-${{ env.OPENCODE_VERSION }}
+
+      - name: Install OpenCode
+        run: |
+          set -euo pipefail
+          if [ ! -x "$HOME/.opencode/bin/opencode" ]; then
+            curl -fsSL https://opencode.ai/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
+          fi
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Review diff
+        env:
+          LITELLM_BASE_URL: ${{ secrets.LITELLM_BASE_URL }}
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          SDLC_MODEL: ${{ vars.SDLC_MODEL }}
+        run: |
+          set -euo pipefail
+          for var in LITELLM_BASE_URL LITELLM_API_KEY SDLC_MODEL; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::$var is not set"
+              exit 1
+            fi
+          done
+
+          git diff "origin/main...HEAD" > /tmp/pr.diff
+          if [ ! -s /tmp/pr.diff ]; then
+            echo "::error::The pull request diff is empty"
+            exit 1
+          fi
+
+          opencode --standalone run --auto --archived --format json \
+            --agent reviewer \
+            --title "SDLC review run #${{ github.run_number }}" \
+            --file /tmp/pr.diff \
+            "$(cat .github/sdlc/review.md)" | tee /tmp/opencode-review.json
+
+      - name: Post review and enforce verdict
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ ! -f REVIEW.md ]; then
+            echo "::error::The reviewer did not write REVIEW.md"
+            exit 1
+          fi
+
+          verdict=$(head -n 5 REVIEW.md | tr -d '\r' | grep -m1 -E '^VERDICT: (APPROVE|REQUEST_CHANGES)$' | awk '{print $2}' || true)
+
+          {
+            echo "<!-- sdlc-review -->"
+            cat REVIEW.md
+            echo
+            echo "_Automated review by OpenCode._"
+          } > /tmp/review-comment.md
+
+          gh pr comment "${{ needs.implement.outputs.pr }}" --body-file /tmp/review-comment.md
+
+          if [ -z "$verdict" ]; then
+            echo "::error::REVIEW.md is missing a valid VERDICT line"
+            exit 1
+          fi
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+
+          if [ "$verdict" != "APPROVE" ]; then
+            echo "::error::Review requested changes. The PR stays open and no release is created."
+            exit 1
+          fi
+
+  merge:
+    name: Merge pull request
+    runs-on: ubuntu-latest
+    needs: [implement, review]
+    if: needs.implement.outputs.changed == 'true' && needs.review.result == 'success'
+    steps:
+      - name: Squash merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh pr merge "${{ needs.implement.outputs.pr }}" --squash --delete-branch
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [implement, quality, review, merge]
+    if: |
+      always() &&
+      needs.quality.result == 'success' &&
+      (needs.review.result == 'success' || needs.review.result == 'skipped') &&
+      (needs.merge.result == 'success' || needs.merge.result == 'skipped')
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Build binaries
+        id: build
+        run: |
+          set -euo pipefail
+          tag="v0.1.${{ github.run_number }}"
+          mkdir -p dist
+          for os in linux darwin windows; do
+            for arch in amd64 arm64; do
+              ext=""
+              [ "$os" = "windows" ] && ext=".exe"
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build \
+                -trimpath \
+                -ldflags "-s -w -X main.version=$tag" \
+                -o "dist/magician_${tag}_${os}_${arch}${ext}" \
+                ./cmd/magician
+            done
+          done
+          (cd dist && sha256sum ./* > checksums.txt)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: magician-${{ steps.build.outputs.tag }}
+          path: dist/*
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.build.outputs.tag }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; leaving it untouched."
+          else
+            gh release create "$tag" dist/* \
+              --target main \
+              --title "magician $tag" \
+              --generate-notes
+          fi
