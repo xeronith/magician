@@ -7,8 +7,8 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:8080",
-      "description": "The default magician serve address"
+      "url": "/",
+      "description": "The same origin that served /docs, so requests stay same-origin"
     }
   ],
   "paths": {
