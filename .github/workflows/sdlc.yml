@@ -22,7 +22,7 @@ env:
 jobs:
   implement:
     name: Implement PROMPT.md
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     outputs:
       changed: ${{ steps.commit.outputs.changed || 'false' }}
@@ -30,7 +30,7 @@ jobs:
       pr: ${{ steps.commit.outputs.pr }}
     steps:
       - name: Check out main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -62,7 +62,7 @@ jobs:
 
       - name: Set up Go
         if: steps.detect.outputs.changed == 'true'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: stable
           cache: false
@@ -77,7 +77,7 @@ jobs:
 
       - name: Cache OpenCode
         if: steps.detect.outputs.changed == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.opencode/bin
           key: opencode-${{ runner.os }}-${{ env.OPENCODE_VERSION }}
@@ -186,19 +186,19 @@ jobs:
 
   quality:
     name: Lint and test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: implement
     if: always() && needs.implement.result == 'success'
     steps:
       - name: Check out changes
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.implement.outputs.branch || github.ref }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: stable
           cache: false
@@ -227,20 +227,20 @@ jobs:
 
   review:
     name: Review pull request
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [implement, quality]
     if: needs.implement.outputs.changed == 'true' && needs.quality.result == 'success'
     timeout-minutes: 20
     steps:
       - name: Check out PR branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.implement.outputs.branch }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Cache OpenCode
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.opencode/bin
           key: opencode-${{ runner.os }}-${{ env.OPENCODE_VERSION }}
@@ -314,7 +314,7 @@ jobs:
 
   merge:
     name: Merge pull request
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [implement, review]
     if: needs.implement.outputs.changed == 'true' && needs.review.result == 'success'
     steps:
@@ -326,7 +326,7 @@ jobs:
 
   release:
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [implement, quality, review, merge]
     if: |
       always() &&
@@ -335,14 +335,14 @@ jobs:
       (needs.merge.result == 'success' || needs.merge.result == 'skipped')
     steps:
       - name: Check out main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: stable
           cache: false
@@ -368,7 +368,7 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: magician-${{ steps.build.outputs.tag }}
           path: dist/*

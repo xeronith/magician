@@ -96,6 +96,10 @@ go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 run ./...
   `LITELLM_BASE_URL` / `LITELLM_API_KEY` secrets. The model must support tool calling.
 - When editing `.github/workflows/sdlc.yml`, validate with:
   `go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/sdlc.yml`
+- Actions are pinned to Node 24 majors (`checkout@v7`, `setup-go@v7`, `cache@v6`,
+  `upload-artifact@v7`) and every job uses `ubuntu-24.04`. Don't use `ubuntu-latest` or
+  Node 20 action majors; they produce deprecation warnings. Node 24 actions need runner
+  `v2.327.1+`, which GitHub-hosted runners satisfy.
 - Keep the `implement` and `quality` jobs on matching tool versions (Go `stable`,
   golangci-lint `v2.15.0`) and keep `.github/sdlc/implement.md` telling the agent to run
   the same commands.
