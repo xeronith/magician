@@ -51,6 +51,27 @@ func TestReverse(t *testing.T) {
 	}
 }
 
+func TestShout(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "single word is uppercased", input: "magic", want: "MAGIC!!!"},
+		{name: "multiple words are uppercased", input: "hello there", want: "HELLO THERE!!!"},
+		{name: "mixed case becomes upper", input: "AbC dEf", want: "ABC DEF!!!"},
+		{name: "empty text still shouts", input: "", want: "!!!"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shout(tt.input); got != tt.want {
+				t.Errorf("shout(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRun(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -65,6 +86,8 @@ func TestRun(t *testing.T) {
 		{name: "no command is a usage error", args: nil, wantErr: true},
 		{name: "unknown command is an error", args: []string{"fly"}, wantErr: true},
 		{name: "spell without a word is an error", args: []string{"spell"}, wantErr: true},
+		{name: "shout joins and uppercases words", args: []string{"shout", "hello", "world"}, want: "HELLO WORLD!!!\n"},
+		{name: "shout without text is an error", args: []string{"shout"}, wantErr: true},
 	}
 
 	for _, tt := range tests {
