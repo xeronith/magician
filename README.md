@@ -27,7 +27,7 @@ flowchart TD
 | `merge` | Squash-merges the PR only when the review returned `VERDICT: APPROVE`. |
 | `release` | Builds linux/darwin/windows on amd64/arm64, writes checksums, tags `v0.1.<run_number>`, and creates a GitHub Release. |
 
-Pushes that do not touch `PROMPT.md` skip the agent and the PR entirely, but still run lint/tests and publish a release. Trigger the workflow manually from the Actions tab to force an implementation run.
+Pushes that do not touch `PROMPT.md` do not start the workflow at all - no agent, lint/tests, or release. Trigger it manually from the Actions tab to force an implementation run.
 
 ## Demo
 

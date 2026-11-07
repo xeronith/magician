@@ -3,6 +3,8 @@ name: SDLC
 on:
   push:
     branches: [main]
+    paths:
+      - PROMPT.md
   workflow_dispatch:
 
 permissions:
