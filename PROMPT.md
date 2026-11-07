@@ -27,10 +27,17 @@ Build a small, dependency-free Go CLI called `magician` in the module `github.co
 - Join multiple words with a single space.
 - Exit with a non-zero status and a clear message when `<text>` is missing.
 
+`magician count <text>`
+
+- Print the number of whitespace-separated words in the text.
+- Join multiple arguments with a single space.
+- Exit with a non-zero status and a clear message when `<text>` is missing.
+- Whitespace-only text prints `0`.
+
 ## Requirements
 
 - Go standard library only.
 - Entrypoint: `./cmd/magician` with `var version = "dev"` in package `main`.
-- Table-driven unit tests for the greeting, reversing, and shouting logic.
+- Table-driven unit tests for the greeting, reversing, shouting, and counting logic.
 - `gofmt`, `go build ./...`, `go vet ./...`, `go test ./...`, and `golangci-lint run ./...` must pass.
 - A short usage document at `docs/usage.md` with examples for every command.
