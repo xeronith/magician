@@ -1,8 +1,8 @@
 # AGENTS.md
 
-`magician` is a tiny Go CLI and a demo of a prompt-driven SDLC pipeline. `README.md`
-explains the design, setup, and risks. This file only covers what an agent needs to
-change the repo without breaking it.
+`magician` is a tiny Go CLI and HTTP API, and a demo of a prompt-driven SDLC pipeline.
+`README.md` explains the design, setup, and risks. This file only covers what an agent
+needs to change the repo without breaking it.
 
 ## The app is generated from the spec
 
@@ -12,9 +12,10 @@ change the repo without breaking it.
   in the same change. A later push that only touches `PROMPT.md` re-runs the implementer,
   so behavior that exists only in code can be lost. The CI implementer only reads
   `PROMPT.md`; it is denied edits to it.
-- Locally, a new command touches four files: `PROMPT.md`, `cmd/magician/main.go`,
-  `cmd/magician/main_test.go`, and `docs/usage.md`. In CI the implementer edits the last
-  three because the prompt change is what triggered the run.
+- Locally, a CLI command touches `PROMPT.md`, `cmd/magician/main.go`, `main_test.go`, and
+  `docs/usage.md`. An HTTP change also touches `server.go`, `server_test.go`, and
+  `openapi.json`. In CI the implementer edits the generated files because the prompt
+  change triggered the run.
 
 ## Verification commands
 
@@ -44,10 +45,25 @@ go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 run ./...
   Releases inject the tag with `-ldflags "-X main.version=<tag>"`.
 - Command logic goes through `run(io.Writer, []string) error`; `main` only wires
   `os.Args` and the exit code. Tests call `run` with a `bytes.Buffer`.
-- Tests are table-driven and fast: no network, sleeps, or external services.
+- Tests are table-driven and fast: no external network, sleeps, or external services.
+  HTTP tests use `net/http/httptest` and never bind a fixed port.
 - `errcheck` is enabled. Return errors, or discard them explicitly with `_, _ =`
   (see `say`). Don't leave a bare `fmt.Fprintln(...)`.
-- `docs/usage.md` must document every user-facing command and exact output.
+- `docs/usage.md` must document every user-facing command, endpoint, and exact output.
+
+## HTTP server
+
+- `magician serve` lives in `cmd/magician/server.go`, defaults to `127.0.0.1:8080`, and
+  blocks until interrupted. Keep the existing CLI commands in `main.go` working.
+- `newSpellHandler()` returns the full mux so tests can use `httptest` without binding a
+  port. Never fetch the Scalar CDN or sleep in tests.
+- The spell store is in-memory and mutex-guarded; IDs increase from 1 and are never reused.
+- `cmd/magician/openapi.json` is embedded with `//go:embed` and must stay in sync with the
+  routes. `/docs` imports
+  `https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.77.0/esm.js` in the browser and
+  points Scalar at `/openapi.json`.
+- Default to loopback. The server has no auth, TLS, persistence, or rate limiting; don't
+  expose it beyond `127.0.0.1` in examples without calling that out.
 
 ## Pipeline rules
 
