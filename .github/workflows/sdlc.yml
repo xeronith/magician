@@ -77,7 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -x "$HOME/.opencode/bin/opencode" ]; then
-            curl -fsSL https://opencode.ai/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
+            curl -fsSL https://opencode.ai/v2/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
           fi
           echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
 
@@ -238,7 +238,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -x "$HOME/.opencode/bin/opencode" ]; then
-            curl -fsSL https://opencode.ai/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
+            curl -fsSL https://opencode.ai/v2/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
           fi
           echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
 

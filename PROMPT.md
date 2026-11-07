@@ -1,6 +1,6 @@
 # Project: magician
 
-Build a small, dependency-free Go CLI called `magician`.
+Build a small, dependency-free Go CLI called `magician` in the module `github.com/xeronith/magician`.
 
 ## Commands
 
