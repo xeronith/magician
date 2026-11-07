@@ -35,6 +35,14 @@ Build a small, dependency-free Go CLI and HTTP API called `magician` in the modu
 - Exit with a non-zero status and a clear message when `<text>` is missing.
 - Whitespace-only text prints `0`.
 
+`magician palindrome <text>`
+
+- Print `true` when the text reads the same forwards and backwards, otherwise `false`.
+- Ignore case, whitespace, and punctuation; compare only letters and digits.
+- Join multiple arguments with a single space.
+- Text with no letters or digits, including whitespace-only text, prints `true`.
+- Exit with a non-zero status and a clear message when `<text>` is missing.
+
 `magician serve [addr]`
 
 - Start an HTTP server and block until the process is interrupted.
