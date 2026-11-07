@@ -1,6 +1,6 @@
-// Command magician is a small CLI with version, greet, spell, shout, and count
-// commands, plus serve: an HTTP server with a small spell REST API and Scalar
-// documentation.
+// Command magician is a small CLI with version, greet, spell, shout, count,
+// and palindrome commands, plus serve: an HTTP server with a small spell REST
+// API and Scalar documentation.
 package main
 
 import (
@@ -13,15 +13,17 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
 )
 
 var version = "dev"
 
 // errUsage describes the accepted commands.
-var errUsage = errors.New("usage: magician <version|greet|spell|shout|count|serve> [args]")
+var errUsage = errors.New("usage: magician <version|greet|spell|shout|count|palindrome|serve> [args]")
 
 func main() {
 	if err := run(os.Stdout, os.Args[1:]); err != nil {
@@ -61,6 +63,12 @@ func run(out io.Writer, args []string) error {
 		}
 		say(out, fmt.Sprintf("%d", count(strings.Join(args[1:], " "))))
 		return nil
+	case "palindrome":
+		if len(args) < 2 {
+			return errors.New("palindrome: missing text")
+		}
+		say(out, strconv.FormatBool(palindrome(strings.Join(args[1:], " "))))
+		return nil
 	case "serve":
 		return serve(out, args[1:])
 	default:
@@ -98,6 +106,24 @@ func shout(text string) string {
 // count returns the number of whitespace-separated words in text.
 func count(text string) int {
 	return len(strings.Fields(text))
+}
+
+// palindrome reports whether text reads the same forwards and backwards
+// ignoring case, whitespace, and punctuation: only letters and digits are
+// compared. Text with no letters or digits counts as a palindrome.
+func palindrome(text string) bool {
+	var cleaned []rune
+	for _, r := range text {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			cleaned = append(cleaned, unicode.ToLower(r))
+		}
+	}
+	for i, j := 0, len(cleaned)-1; i < j; i, j = i+1, j-1 {
+		if cleaned[i] != cleaned[j] {
+			return false
+		}
+	}
+	return true
 }
 
 // defaultAddr is the address serve listens on when none is given.

@@ -101,6 +101,40 @@ $ echo $?
 1
 ```
 
+## magician palindrome &lt;text&gt;
+
+Prints `true` when the text reads the same forwards and backwards, otherwise `false`. Case, whitespace, and punctuation are ignored: only letters and digits are compared. Multiple arguments are joined with a single space. Text with no letters or digits, including whitespace-only text, prints `true`.
+
+```console
+$ magician palindrome racecar
+true
+
+$ magician palindrome "Never odd or even"
+true
+
+$ magician palindrome "A man, a plan, a canal: Panama!"
+true
+
+$ magician palindrome hello
+false
+
+$ magician palindrome "  12321  "
+true
+
+$ magician palindrome "   "
+true
+```
+
+When the text is missing, the command exits with a non-zero status and a clear error:
+
+```console
+$ magician palindrome
+palindrome: missing text
+
+$ echo $?
+1
+```
+
 ## magician serve [addr]
 
 Starts an HTTP server and blocks until the process is interrupted with `Ctrl+C`. The address is optional and defaults to `127.0.0.1:8080`.

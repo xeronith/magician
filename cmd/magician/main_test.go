@@ -95,6 +95,33 @@ func TestCount(t *testing.T) {
 	}
 }
 
+func TestPalindrome(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{name: "empty text is a palindrome", input: "", want: true},
+		{name: "whitespace-only text is a palindrome", input: "  \t\n ", want: true},
+		{name: "punctuation-only text is a palindrome", input: "!?", want: true},
+		{name: "a palindrome word", input: "racecar", want: true},
+		{name: "case is ignored", input: "RaceCar", want: true},
+		{name: "whitespace and punctuation are ignored", input: "A man, a plan, a canal: Panama!", want: true},
+		{name: "not a palindrome", input: "hello", want: false},
+		{name: "digits are compared", input: "12321", want: true},
+		{name: "digits that differ", input: "12345", want: false},
+		{name: "unicode letters are compared", input: "hél léh", want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := palindrome(tt.input); got != tt.want {
+				t.Errorf("palindrome(%q) = %t, want %t", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestServe(t *testing.T) {
 	tests := []struct {
 		name string
@@ -161,6 +188,9 @@ func TestRun(t *testing.T) {
 		{name: "shout without text is an error", args: []string{"shout"}, wantErr: true},
 		{name: "count counts the words", args: []string{"count", "hello", "big", "world"}, want: "3\n"},
 		{name: "count without text is an error", args: []string{"count"}, wantErr: true},
+		{name: "palindrome joins and checks the words", args: []string{"palindrome", "Never", "odd", "or", "even"}, want: "true\n"},
+		{name: "palindrome reports false", args: []string{"palindrome", "hello"}, want: "false\n"},
+		{name: "palindrome without text is an error", args: []string{"palindrome"}, wantErr: true},
 	}
 
 	for _, tt := range tests {
