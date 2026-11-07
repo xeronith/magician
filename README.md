@@ -73,7 +73,7 @@ $ curl http://127.0.0.1:8080/api/spells
 [{"id":1,"name":"fireball","effect":"burns"}]
 ```
 
-Data is in memory and resets on restart. `/docs` loads Scalar from a pinned jsDelivr URL in the browser; the API itself has no external runtime dependency.
+Data is in memory and resets on restart. `/docs` loads Scalar from a pinned jsDelivr URL in the browser; the API itself has no external runtime dependency. The OpenAPI document uses a relative server URL (`/`), so Scalar's test requests go to whatever host and port served `/docs` - `localhost`, `127.0.0.1`, or a custom address - without CORS configuration.
 
 ## Repository layout
 
@@ -238,7 +238,7 @@ These are real, and they are the interesting part of the demo:
 - **Cost and latency.** Each prompt change makes two model calls (implement and review), plus Actions minutes for five jobs. Long agent runs can hit the 20-minute step timeout.
 - **Model compatibility.** The LiteLLM alias must support tool calling and the OpenAI-compatible API shape. A chat-only model will fail at the edit step.
 - **The Scalar docs page depends on a CDN.** `/docs` loads `@scalar/api-reference@1.77.0` from jsDelivr in the browser. Pinning the version prevents drift, but it does not remove the supply-chain or availability risk. The API and `/openapi.json` still work offline.
-- **The HTTP server is a demo, not a service.** `magician serve` has no authentication, TLS, persistence, or rate limiting, keeps all data in memory, and binds to loopback by default. Do not expose it with `0.0.0.0` or put real data behind it.
+- **The HTTP server is a demo, not a service.** `magician serve` has no authentication, TLS, persistence, CORS, or rate limiting, keeps all data in memory, and binds to loopback by default. Browser clients must use the same origin as `/docs`. Do not expose it with `0.0.0.0` or put real data behind it.
 - **`main` is unprotected by default.** That is what makes the auto-merge work. Tightening branch protection without changing the design will break the pipeline.
 
 ### Hardening ideas for a production version
@@ -275,6 +275,7 @@ These are real, and they are the interesting part of the demo:
 | Release fails at `./cmd/magician` | The agent did not create the required entrypoint; the implement job should have caught this. Re-run with a clearer prompt. |
 | Lint fails on generated code | Run `golangci-lint run` locally and either fix the prompt or relax `.golangci.yml`. |
 | `/docs` is blank or fails to load | The Scalar CDN is unreachable or blocked. The API and `/openapi.json` still work. |
+| Scalar UI shows `Load failed` when sending a request | On releases before `v0.1.9` the server URL was hardcoded; upgrade, or open `/docs` at the exact address the server printed. Current releases use a relative server URL and stay same-origin. |
 | `serve: listen tcp ... address already in use` | Another process is on the port. Pass a different address, for example `magician serve 127.0.0.1:9090`. |
 
 ## Why this exists

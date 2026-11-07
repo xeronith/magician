@@ -59,9 +59,12 @@ go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 run ./...
   port. Never fetch the Scalar CDN or sleep in tests.
 - The spell store is in-memory and mutex-guarded; IDs increase from 1 and are never reused.
 - `cmd/magician/openapi.json` is embedded with `//go:embed` and must stay in sync with the
-  routes. `/docs` imports
+  routes. Its `servers` entry must stay relative (`"/"`); never hardcode the listen
+  address, or Scalar's browser requests become cross-origin and fail. `/docs` imports
   `https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.77.0/esm.js` in the browser and
   points Scalar at `/openapi.json`.
+- The server intentionally sends no CORS headers. Keep browser clients same-origin; don't
+  add wildcard CORS to the loopback API.
 - Default to loopback. The server has no auth, TLS, persistence, or rate limiting; don't
   expose it beyond `127.0.0.1` in examples without calling that out.
 
