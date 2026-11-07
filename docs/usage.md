@@ -6,6 +6,8 @@
 $ go build -o magician ./cmd/magician
 ```
 
+Besides the commands below, `magician serve` runs an HTTP server with a small spell REST API and Scalar documentation.
+
 ## magician version
 
 Prints the version. Binaries built without the release pipeline report `dev`; releases inject the tag with `-ldflags "-X main.version=<tag>"`.
@@ -97,4 +99,114 @@ count: missing text
 
 $ echo $?
 1
+```
+
+## magician serve [addr]
+
+Starts an HTTP server and blocks until the process is interrupted with `Ctrl+C`. The address is optional and defaults to `127.0.0.1:8080`.
+
+```console
+$ magician serve
+listening on http://127.0.0.1:8080
+```
+
+A custom address can be passed:
+
+```console
+$ magician serve 127.0.0.1:9090
+listening on http://127.0.0.1:9090
+```
+
+When the address cannot be used, the command exits with a non-zero status and a clear error:
+
+```console
+$ magician serve bogus
+serve: listen tcp: address bogus: missing port in address
+
+$ echo $?
+1
+```
+
+## REST API
+
+`magician serve` exposes a small spell catalog. Every response with a body is JSON. Spells live in memory and are reset when the process exits; ids start at 1, increase on every creation, and are never reused. The examples below assume the server runs on `127.0.0.1:8080`.
+
+### GET /health
+
+```console
+$ curl http://127.0.0.1:8080/health
+{"status":"ok"}
+```
+
+### GET /api/spells
+
+Lists every spell, oldest first, as a JSON array:
+
+```console
+$ curl http://127.0.0.1:8080/api/spells
+[]
+```
+
+### POST /api/spells
+
+Creates a spell. Both fields are required; surrounding whitespace is trimmed, and a blank field is rejected with `400`.
+
+```console
+$ curl -X POST -d '{"name":"  fireball  ","effect":"burns"}' http://127.0.0.1:8080/api/spells
+{"id":1,"name":"fireball","effect":"burns"}
+```
+
+Invalid JSON or a blank field returns `400`:
+
+```console
+$ curl -X POST -d '{"name":"","effect":"burns"}' http://127.0.0.1:8080/api/spells
+{"error":"name must not be blank"}
+
+$ curl -X POST -d 'not json' http://127.0.0.1:8080/api/spells
+{"error":"invalid JSON"}
+```
+
+### GET /api/spells/{id}
+
+```console
+$ curl http://127.0.0.1:8080/api/spells/1
+{"id":1,"name":"fireball","effect":"burns"}
+
+$ curl http://127.0.0.1:8080/api/spells/999
+{"error":"spell not found"}
+```
+
+### DELETE /api/spells/{id}
+
+Deletes the spell and answers `204` with no body:
+
+```console
+$ curl -i -X DELETE http://127.0.0.1:8080/api/spells/1
+HTTP/1.1 204 No Content
+
+$ curl -i -X DELETE http://127.0.0.1:8080/api/spells/999
+{"error":"spell not found"}
+```
+
+### GET /openapi.json
+
+Serves the OpenAPI 3.1 document describing every route and schema:
+
+```console
+$ curl http://127.0.0.1:8080/openapi.json
+{"openapi":"3.1.0","info":{"title":"magician",...}}
+```
+
+### GET /docs
+
+Serves an HTML page that renders `/openapi.json` with Scalar. Open `http://127.0.0.1:8080/docs` in a browser. The page imports Scalar from the pinned URL `https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.77.0/esm.js`; the script runs in the browser only, and the server never fetches the CDN itself.
+
+### GET /
+
+Redirects to `/docs`:
+
+```console
+$ curl -i http://127.0.0.1:8080/
+HTTP/1.1 302 Found
+Location: /docs
 ```
