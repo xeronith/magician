@@ -1,6 +1,6 @@
 // Command magician is a small CLI with version, greet, spell, shout, count,
-// and palindrome commands, plus serve: an HTTP server with a small spell REST
-// API and Scalar documentation.
+// sort, and palindrome commands, plus serve: an HTTP server with a small spell
+// REST API and Scalar documentation.
 package main
 
 import (
@@ -23,7 +23,7 @@ import (
 var version = "dev"
 
 // errUsage describes the accepted commands.
-var errUsage = errors.New("usage: magician <version|greet|spell|shout|count|palindrome|serve> [args]")
+var errUsage = errors.New("usage: magician <version|greet|spell|shout|count|sort|palindrome|serve> [args]")
 
 func main() {
 	if err := run(os.Stdout, os.Args[1:]); err != nil {
@@ -62,6 +62,12 @@ func run(out io.Writer, args []string) error {
 			return errors.New("count: missing text")
 		}
 		say(out, fmt.Sprintf("%d", count(strings.Join(args[1:], " "))))
+		return nil
+	case "sort":
+		if len(args) < 2 {
+			return errors.New("sort: missing text")
+		}
+		say(out, strings.Join(sorted(strings.Join(args[1:], " ")), " "))
 		return nil
 	case "palindrome":
 		if len(args) < 2 {
@@ -106,6 +112,14 @@ func shout(text string) string {
 // count returns the number of whitespace-separated words in text.
 func count(text string) int {
 	return len(strings.Fields(text))
+}
+
+// sorted returns the whitespace-separated words of text in ascending byte
+// order, keeping duplicates.
+func sorted(text string) []string {
+	words := strings.Fields(text)
+	slices.Sort(words)
+	return words
 }
 
 // palindrome reports whether text reads the same forwards and backwards

@@ -101,6 +101,37 @@ $ echo $?
 1
 ```
 
+## magician sort &lt;text&gt;
+
+Prints the whitespace-separated words sorted in ascending order and joined by a single space. Multiple arguments are joined with a single space. Sorting is by byte order (Go string comparison), so uppercase letters come before lowercase ones. Duplicates are kept. Text with no words prints an empty line.
+
+```console
+$ magician sort banana apple cherry
+apple banana cherry
+
+$ magician sort "one   two  three"
+one three two
+
+$ magician sort zeta Alpha beta
+Alpha beta zeta
+
+$ magician sort b a b a
+a a b b
+
+$ magician sort "   "
+
+```
+
+When the text is missing, the command exits with a non-zero status and a clear error:
+
+```console
+$ magician sort
+sort: missing text
+
+$ echo $?
+1
+```
+
 ## magician palindrome &lt;text&gt;
 
 Prints `true` when the text reads the same forwards and backwards, otherwise `false`. Case, whitespace, and punctuation are ignored: only letters and digits are compared. Multiple arguments are joined with a single space. Text with no letters or digits, including whitespace-only text, prints `true`.

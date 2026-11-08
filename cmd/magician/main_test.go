@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -90,6 +91,30 @@ func TestCount(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := count(tt.input); got != tt.want {
 				t.Errorf("count(%q) = %d, want %d", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSort(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{name: "empty text has no words", input: "", want: nil},
+		{name: "whitespace-only text has no words", input: "  \t\n ", want: nil},
+		{name: "a single word", input: "magic", want: []string{"magic"}},
+		{name: "multiple words are sorted", input: "banana apple cherry", want: []string{"apple", "banana", "cherry"}},
+		{name: "runs of whitespace separate words", input: "  one\ttwo\nthree  ", want: []string{"one", "three", "two"}},
+		{name: "uppercase sorts before lowercase", input: "zeta Alpha beta", want: []string{"Alpha", "beta", "zeta"}},
+		{name: "duplicates are kept", input: "b a b a", want: []string{"a", "a", "b", "b"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := sorted(tt.input); !slices.Equal(got, tt.want) {
+				t.Errorf("sorted(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}
@@ -188,6 +213,11 @@ func TestRun(t *testing.T) {
 		{name: "shout without text is an error", args: []string{"shout"}, wantErr: true},
 		{name: "count counts the words", args: []string{"count", "hello", "big", "world"}, want: "3\n"},
 		{name: "count without text is an error", args: []string{"count"}, wantErr: true},
+		{name: "sort joins and sorts the words", args: []string{"sort", "banana", "apple", "cherry"}, want: "apple banana cherry\n"},
+		{name: "sort sorts by byte order", args: []string{"sort", "zeta", "Alpha"}, want: "Alpha zeta\n"},
+		{name: "sort keeps duplicates", args: []string{"sort", "b", "a", "b"}, want: "a b b\n"},
+		{name: "sort of whitespace-only text prints an empty line", args: []string{"sort", "   "}, want: "\n"},
+		{name: "sort without text is an error", args: []string{"sort"}, wantErr: true},
 		{name: "palindrome joins and checks the words", args: []string{"palindrome", "Never", "odd", "or", "even"}, want: "true\n"},
 		{name: "palindrome reports false", args: []string{"palindrome", "hello"}, want: "false\n"},
 		{name: "palindrome without text is an error", args: []string{"palindrome"}, wantErr: true},
