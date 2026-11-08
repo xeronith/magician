@@ -35,6 +35,15 @@ Build a small, dependency-free Go CLI and HTTP API called `magician` in the modu
 - Exit with a non-zero status and a clear message when `<text>` is missing.
 - Whitespace-only text prints `0`.
 
+`magician sort <text>`
+
+- Print the whitespace-separated words sorted in ascending order, joined by a single space.
+- Join multiple arguments with a single space.
+- Sort by byte order (Go string comparison), so uppercase letters come before lowercase ones.
+- Keep duplicate words.
+- Text with no words prints an empty line.
+- Exit with a non-zero status and a clear message when `<text>` is missing.
+
 `magician palindrome <text>`
 
 - Print `true` when the text reads the same forwards and backwards, otherwise `false`.
